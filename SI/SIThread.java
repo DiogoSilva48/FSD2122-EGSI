@@ -5,6 +5,10 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.IOException;
 import java.net.Socket;
+import java.security.PrivateKey;
+import java.security.Signature;
+
+import Keys.KeyHandler;
 
 public class SIThread implements Runnable{
 
@@ -12,14 +16,15 @@ public class SIThread implements Runnable{
     
     private String st_ip;
     private int st_port;
-    private String st_auth_hash;
 
-    public SIThread(Socket s, String st_ip, int st_port, String st_auth)
+    private PrivateKey privateKey;
+
+    public SIThread(Socket s, String st_ip, int st_port, PrivateKey privateKey)
     {
         this.socket = s;
         this.st_ip = st_ip;
         this.st_port = st_port;
-        this.st_auth_hash = st_auth;
+        this.privateKey = privateKey;
     }
     
     public void run()
@@ -50,17 +55,38 @@ public class SIThread implements Runnable{
                 out.flush();
             }
 
-            String[] part;
+            String[] parts;
             if (read != null) {
-                part = read.split(" ");
-                String op = part[0];
+                parts = read.split(" ");
+                String op = parts[0];
 
                 switch (op) {
-                    case ("getST"):
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("ST").append("|").append(this.st_ip).append("|").append(this.st_port).append("|").append(this.st_auth_hash);
-                        out.println(sb.toString());
-                        out.flush();
+                    case ("getST"):  
+                        if(parts.length == 2)
+                        {
+                            String hash_auth = null;
+                            try {
+                                Signature signature = Signature.getInstance("SHA256withRSA");
+                                signature.initSign(this.privateKey);
+                                signature.update(parts[1].getBytes());
+                                hash_auth = KeyHandler.toHexString(signature.sign());
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+
+                            if(hash_auth != null) {
+                                StringBuilder sb = new StringBuilder();
+                                sb.append("ST").append("|").append(this.st_ip).append("|").append(this.st_port).append("|").append(hash_auth);
+                                out.println(sb.toString());
+                                out.flush();
+                            }
+                            else {
+                                out.println("An error has occured generating the st authentication");
+                                out.flush();
+                            }
+                            
+                        }                  
+                        
                         break;
                     case ("close"):
                         break;
