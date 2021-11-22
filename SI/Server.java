@@ -3,7 +3,6 @@ package SI;
 import java.io.File;
 import java.net.ServerSocket;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 
 import Keys.KeyHandler;
 
@@ -24,5 +23,6 @@ public class Server {
             Thread t = new Thread(new SIThread(server.accept(), ST_IP, ST_PORT, myPrivateKey));
             t.start();
         }
+
     }
 }

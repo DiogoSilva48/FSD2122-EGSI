@@ -1,14 +1,12 @@
 package ST;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.security.PublicKey;
 import java.security.Signature;
-import java.util.HashMap;
 import java.util.Map;
 
 import Keys.KeyHandler;
