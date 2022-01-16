@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.time.Instant;
 import java.util.Map;
 
 import Keys.KeyHandler;
@@ -19,6 +20,7 @@ public class SThread implements Runnable{
     private Map<String,ServicoRedeRMI> servicos_java_rmi;
 
     private PublicKey siPublicKey;
+    private Instant timestamp;
 
     public SThread(Socket socket, Map<String,ServicoRedeSockets> servicos_java_tcp, Map<String,ServicoRedeRMI> servicos_java_rmi, PublicKey siPublicKey){
         this.socket = socket;
@@ -27,6 +29,7 @@ public class SThread implements Runnable{
         servicos_java_tcp.put("HUM", new ServicoRedeSockets("Humidity Service","127.0.0.1",2000,"HUM"));
         servicos_java_rmi.put("TEMP", new ServicoRedeRMI("Temperature Service","127.0.0.1",1099,"/TemperatureService","TEMP"));
         this.siPublicKey = siPublicKey;
+        this.timestamp = Instant.now();
     }
 
     public synchronized void new_tcp_service(ServicoRedeSockets servicoRedeSockets){
@@ -101,7 +104,7 @@ public class SThread implements Runnable{
 
                                     new_tcp_service(new ServicoRedeSockets(description, ip, port, register_key));
                                     
-                                    out.println("great_success_tcp");
+                                    out.println("great_success_inserting_tcp_service");
                                     out.flush();
                                 }
                             }                         
@@ -121,7 +124,7 @@ public class SThread implements Runnable{
 
                                     new_rmi_service(new ServicoRedeRMI(description, ip, port, name, register_key));
 
-                                    out.println("great_success_rmi");
+                                    out.println("great_success_inserting_rmi_service");
                                     out.flush();
                                 }
                             }                     
@@ -136,7 +139,7 @@ public class SThread implements Runnable{
                                 out.println("description|ip|port|key");
                                 out.flush();
                                 for(ServicoRedeSockets s : this.servicos_java_tcp.values()) {
-                                    out.println("   -> " + s.getDescription() + "|" + s.getIp() + "|" + s.getPort() + "|" + s.getRegister_key());>
+                                    out.println("   -> " + s.getDescription() + "|" + s.getIp() + "|" + s.getPort() + "|" + s.getRegister_key());
                                 }   
                                 out.flush();
 
@@ -158,9 +161,30 @@ public class SThread implements Runnable{
                                 out.flush();   
                             }                     
                         }
-                        break;    
+                        break;
+                    case ("access_tcp_service"):
+                        if(parts.length == 4){
+                            if(authorization_checker(parts[1], parts[2]))
+                            {
+                                ServicoRedeSockets s = this.servicos_java_tcp.get(parts[3]);
+                                out.println(s.getIp() + "|" + s.getPort() + "|" + this.timestamp);
+                                out.flush();
+                            }
+                        }
+                        break;
+                    case ("access_rmi_service"):
+                        if(parts.length == 4){
+                            if(authorization_checker(parts[1], parts[2]))
+                            {
+                                ServicoRedeRMI s = this.servicos_java_rmi.get(parts[3]);
+                                out.println(s.getIp() + "|" + s.getPort() + "|" + s.getName() + "|" + this.timestamp);
+                                out.flush();
+                            }
+                        }
+                        break;
                     default:
-                        out.println("You have not entered a valid command");
+                        String st = "Available Commands: -> query_tcp unique_id authentication_hash -> query_rmi unique_id authentication_hash -> register_tcp_service unique_id authentication_hash description|ip|port|register_key -> register_rmi_service unique_id authentication_hash description|ip|port|name|register_key -> access_tcp_service unique_id authentication_hash service_key -> access_rmi_service unique_id authentication_hash service_key";
+                        out.println(st);
                         out.flush();    
                 }
             }

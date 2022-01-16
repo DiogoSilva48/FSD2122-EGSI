@@ -16,7 +16,7 @@ public class Server {
     public static void main(String[] args) throws Exception
     {
         ServerSocket server = new ServerSocket(SI_PORT);
-        PrivateKey myPrivateKey = KeyHandler.getPrivateKeyFromFile(new File("SI/si_privatekey.txt"));
+        PrivateKey myPrivateKey = KeyHandler.getPrivateKeyFromFile(new File("src/SI/si_privatekey.txt"));
       
         while(true)
         {

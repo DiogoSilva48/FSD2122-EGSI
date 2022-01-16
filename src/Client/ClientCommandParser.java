@@ -1,9 +1,15 @@
 package Client;
 
+import ServiceTemperaturePublic.Server.ServicesInterface;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.rmi.Remote;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.time.Instant;
 
 public class ClientCommandParser {
     
@@ -96,7 +102,14 @@ public class ClientCommandParser {
                     this.st_out.println("query_tcp " + this.unique_id + " " + this.st_auth_hash);
                     this.st_out.flush();
 
+                    //System.out.println(this.st_in.readLine());
+                    String input_TCP = this.st_in.readLine();
                     System.out.println(this.st_in.readLine());
+                    String[] tcp_naming_parts = input_TCP.split(" ");
+                    int nservices = Integer.parseInt(tcp_naming_parts[1]);
+                    for(int i=0; i < nservices; i++){
+                        System.out.println(this.st_in.readLine());
+                    }
                     break;
                 
                 case "query_rmi":
@@ -104,7 +117,13 @@ public class ClientCommandParser {
                     this.st_out.println("query_rmi " + this.unique_id + " " + this.st_auth_hash);
                     this.st_out.flush();
 
+                    String input_RMI = this.st_in.readLine();
                     System.out.println(this.st_in.readLine());
+                    String[] rmi_naming_parts = input_RMI.split(" ");
+                    int rservices = Integer.parseInt(rmi_naming_parts[1]);
+                    for(int i=0; i < rservices; i++){
+                        System.out.println(this.st_in.readLine());
+                    }
                     break;    
 
                 case "register_tcp_service":
@@ -146,8 +165,88 @@ public class ClientCommandParser {
                     }
                     break;
 
+                case "access_tcp_service":
+
+                    if(strs.length==2){
+                        String tcpservkey = strs[1];
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("access_tcp_service ")
+                          .append(this.unique_id).append(" ")
+                          .append(this.st_auth_hash).append(" ")
+                          .append(strs[1]);
+
+                        this.st_out.println(sb.toString());
+                        this.st_out.flush();
+
+                        String in = this.st_in.readLine();
+                        String[] parts = in.split("\\|");
+
+                        String tcpip = parts[0];
+                        int tcpport = Integer.parseInt(parts[1]);
+                        Instant i = Instant.parse(parts[2]);
+
+                        Socket socket = new Socket(tcpip, tcpport);
+                        BufferedReader s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                        PrintWriter s_out = new PrintWriter(socket.getOutputStream());
+
+                        //secalhar pode-se enviar logo o parts[2]
+                        s_out.println("getHumidity " + i);
+                        s_out.flush();
+
+                        String resp = s_in.readLine();
+                        switch (resp){
+                            case "403 Forbidden":
+                                String batata = s_in.readLine();
+                                System.out.println("forbidden");
+                                break;
+                            case "200 OK":
+                                System.out.println(s_in.readLine());
+                                break;
+                            case "400 Bad Request":
+                                String batata2 = s_in.readLine();
+                                System.out.println("badrequest");
+                                break;
+                        }
+
+                        socket.shutdownInput();
+                        socket.shutdownOutput();
+                        socket.close();
+                    }
+                    break;
+                case "access_rmi_service":
+
+                    if(strs.length==2){
+                        String tcpservkey = strs[1];
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("access_rmi_service ")
+                                .append(this.unique_id).append(" ")
+                                .append(this.st_auth_hash).append(" ")
+                                .append(strs[1]);
+
+                        this.st_out.println(sb.toString());
+                        this.st_out.flush();
+
+                        String in = this.st_in.readLine();
+                        String[] parts = in.split("\\|");
+
+                        String rmiip = parts[0];
+                        int rmiport = Integer.parseInt(parts[1]);
+                        String name = parts[2];
+                        Instant i = Instant.parse(parts[3]);
+
+                        try{
+                            Registry r = LocateRegistry.getRegistry(rmiip,rmiport);
+                            ServicesInterface tempserv = (ServicesInterface) r.lookup(name);
+
+                            float a = tempserv.getTemp(i);
+                            System.out.println(a);
+                        }
+                        catch (Exception e) {}
+
+                    }
+                    break;
                 default:
-                    System.out.println("Available Commands:\n   -> query_tcp\n   -> query_rmi\n   -> register_tcp_service description|ip|port|register_key\n   -> register_rmi_service description|ip|port|name|register_key\n");
+                    System.out.println("Available Commands:\n   -> query_tcp\n   -> query_rmi\n   -> register_tcp_service description|ip|port|register_key\n   -> register_rmi_service description|ip|port|name|register_key\n   -> access_tcp_service service_key\n   -> access_rmi_service service_key");
             }
         }
 
